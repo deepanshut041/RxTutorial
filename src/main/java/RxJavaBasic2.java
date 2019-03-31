@@ -1,12 +1,26 @@
 import io.reactivex.Observable;
+import io.reactivex.observables.ConnectableObservable;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 //Observables and Subscribers
 public class RxJavaBasic2 {
+
+    private static void sleep(int time) {
+        try {
+            Thread.sleep(time);
+        } catch (InterruptedException e) {
+            // Ignore me.
+        }
+    }
+
+    private static void sleep() {
+        sleep(1000);
+    }
 
     private static void dynamicStream(){
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -36,11 +50,88 @@ public class RxJavaBasic2 {
         );
     }
 
-    
 
+    // Cold Observable: A cold stream restarts from the beginning for each subscriber, and every subscriber gets the full set of items.
+    private static void coldStream(List<String> list){
+
+        Observable<String> stream = Observable.fromIterable(list);
+
+        stream
+            .subscribe(
+                    i -> System.out.println("[A] Received: " + i),
+                    err -> System.out.println("[A] BOOM"),
+                    () -> System.out.println("[A] Completion")
+            );
+
+        stream
+            .subscribe(
+                    i -> System.out.println("[B] Received: " + i),
+                    err -> System.out.println("[B] BOOM"),
+                    () -> System.out.println("[B] Completion")
+            );
+    }
+
+
+    /*
+    * Hot Observable: hot streams broadcast the same items to all listening subscribers.
+    * However, if a subscriber arrives later, it won’t receive the previous items.
+    * Logically, hot streams represent events or facts rather than known finite data sets.
+    */
+    private static void hotStream(){
+
+        AtomicInteger counter = new AtomicInteger();
+
+        Observable<Integer> stream = Observable.<Integer>create(
+            s-> new Thread(
+                    () -> {
+                        while (counter.get() < 5) {
+                            s.onNext(counter.getAndIncrement());
+                            sleep();
+                    }
+            }).start())
+            .publish().autoConnect();
+
+        stream
+            .subscribe(
+                i -> System.out.println("[one] Received: " + i)
+            );
+        sleep();
+        stream
+            .subscribe(
+                i -> System.out.println("[two] Received: " + i)
+            );
+    }
+
+
+    /*
+    * When the data is produced by the Observable itself, we call it a cold Observable.
+    * When the data is produced outside the Observable, we call it a hot Observable.
+    * ConnectableObservable helps us to convert a cold observable to hot observable.
+    */
+    private static void connectedStream(List<String> list){
+        // ConnectableObservable helps us to convert a cold observable to hot observable.
+        ConnectableObservable<String> stream = Observable.fromIterable(list).publish();
+
+        stream
+            .subscribe(
+                    i -> System.out.println("[1] Received: " + i),
+                    err -> System.out.println("[1] BOOM"),
+                    () -> System.out.println("[1] Completion")
+            );
+        stream
+            .subscribe(
+                    i -> System.out.println("[2] Received: " + i),
+                    err -> System.out.println("[2] BOOM"),
+                    () -> System.out.println("[2] Completion")
+            );
+        stream.connect();
+    }
 
     public static void main(String[] args) {
         List<String> SUPER_HEROES = Arrays.asList("Superman", "Batman", "Aquaman", "Asterix", "Captain America");
         // coldStream(SUPER_HEROES);
+        // connectedStream(SUPER_HEROES);
+        // hotStream();
+
     }
 }
