@@ -1,10 +1,12 @@
 import io.reactivex.Observable;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.observables.ConnectableObservable;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 //Observables and Subscribers
@@ -114,17 +116,42 @@ public class RxJavaBasic2 {
 
         stream
             .subscribe(
-                    i -> System.out.println("[1] Received: " + i),
-                    err -> System.out.println("[1] BOOM"),
-                    () -> System.out.println("[1] Completion")
+                    i -> System.out.println("[1] Received: " + i)
             );
         stream
             .subscribe(
-                    i -> System.out.println("[2] Received: " + i),
-                    err -> System.out.println("[2] BOOM"),
-                    () -> System.out.println("[2] Completion")
+                    i -> System.out.println("[2] Received: " + i)
             );
         stream.connect();
+    }
+
+    // Stopping emissions
+    public static void stopEmissions(){
+        AtomicInteger counter = new AtomicInteger();
+        AtomicBoolean closeStream = new AtomicBoolean();
+        Observable<Integer> stream = Observable.<Integer>create(
+            s-> new Thread(
+                () -> {
+                    while (!closeStream.get()) {
+                        s.onNext(counter.getAndIncrement() + 1);
+                        sleep();
+                    }
+                }).start()
+        ).publish()
+        .autoConnect()
+        .doOnDispose(()-> closeStream.set(true));
+
+        Disposable d = stream.subscribe(
+            s -> System.out.println("Received: " + s)
+        );
+
+        // Closes input after 10 second
+        new Thread(
+            () ->{
+               sleep(10000);
+               d.dispose();
+            }
+        ).start();
     }
 
     public static void main(String[] args) {
@@ -132,6 +159,6 @@ public class RxJavaBasic2 {
         // coldStream(SUPER_HEROES);
         // connectedStream(SUPER_HEROES);
         // hotStream();
-
+        stopEmissions();
     }
 }
