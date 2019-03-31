@@ -159,6 +159,6 @@ public class RxJavaBasic2 {
         // coldStream(SUPER_HEROES);
         // connectedStream(SUPER_HEROES);
         // hotStream();
-        stopEmissions();
+        // stopEmissions();
     }
 }
